@@ -64,6 +64,11 @@ class CategoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // TODO: Instead of re-creating a list of Categories in every build(),
+    // save this as a variable inside the State object and create
+    // the list at initialization (in initState()).
+    // This way, you also don't have to pass in the list of categories to
+    // _buildCategoryWidgets()
     final categories = <Category>[];
 
     for (var i = 0; i < _categoryNames.length; i++) {
