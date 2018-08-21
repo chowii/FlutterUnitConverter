@@ -89,7 +89,7 @@ class Category extends StatelessWidget {
           splashColor: color,
           // We can use either the () => function() or the () { function(); }
           // syntax.
-          // TODO: Update this onTap property to call _navigateToConverter()
+          // TODO: DONE Update this onTap property to call _navigateToConverter()
           onTap: () {
             print('I was tapped!');
             _navigateToConverter(context);
