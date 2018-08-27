@@ -5,64 +5,56 @@
 import 'package:flutter/material.dart';
 import 'package:meta/meta.dart';
 
+import 'category.dart';
 import 'unit.dart';
 
 const _padding = EdgeInsets.all(16.0);
 
-/// [ConverterRoute] where users can input amounts to convert in one [Unit]
+/// [UnitConverter] where users can input amounts to convert in one [Unit]
 /// and retrieve the conversion in another [Unit] for a specific [Category].
-///
-/// While it is named ConverterRoute, a more apt name would be ConverterScreen,
-/// because it is responsible for the UI at the route's destination.
-class ConverterRoute extends StatefulWidget {
-  /// This [Category]'s name.
-  final String name;
+class UnitConverter extends StatefulWidget {
+  /// The current [Category] for unit conversion.
+  final Category category;
 
-  /// Color for this [Category].
-  final Color color;
-
-  /// Units for this [Category].
-  final List<Unit> units;
-
-  /// This [ConverterRoute] requires the name, color, and units to not be null.
-  const ConverterRoute({
-    @required this.name,
-    @required this.color,
-    @required this.units,
-  })  : assert(name != null),
-        assert(color != null),
-        assert(units != null);
+  /// This [UnitConverter] takes in a [Category] with [Units]. It can't be null.
+  const UnitConverter({
+    @required this.category,
+  }) : assert(category != null);
 
   @override
-  _ConverterRouteState createState() => _ConverterRouteState();
+  _UnitConverterState createState() => _UnitConverterState();
 }
 
-class _ConverterRouteState extends State<ConverterRoute> {
-  // TODO: Set some variables, such as for keeping track of the user's input
-  // value and units
+class _UnitConverterState extends State<UnitConverter> {
   Unit _fromValue;
   Unit _toValue;
-  String units = "";
   double _inputValue;
-  String _convertedValue = ' ';
+  String _convertedValue = '';
   List<DropdownMenuItem> _unitMenuItems;
   bool _showValidationError = false;
 
-  // TODO: Determine whether you need to override anything, such as initState()
   @override
   void initState() {
     super.initState();
-    _createDropdownItems();
+    _createDropdownMenuItems();
     _setDefaults();
   }
 
-  // TODO: Add other helper functions. We've given you one, _format()
+  @override
+  void didUpdateWidget(UnitConverter old) {
+    super.didUpdateWidget(old);
+    // We update our [DropdownMenuItem] units when we switch [Categories].
+    if (old.category != widget.category) {
+      _createDropdownMenuItems();
+      _setDefaults();
+    }
+  }
 
-  void _createDropdownItems() {
-    var dropdownItem = <DropdownMenuItem>[];
-    widget.units.forEach((unit) {
-    dropdownItem.add(
-      DropdownMenuItem(
+  /// Creates fresh list of [DropdownMenuItem] widgets, given a list of [Unit]s.
+  void _createDropdownMenuItems() {
+    var newItems = <DropdownMenuItem>[];
+    for (var unit in widget.category.units) {
+      newItems.add(DropdownMenuItem(
         value: unit.name,
         child: Container(
           child: Text(
@@ -71,17 +63,18 @@ class _ConverterRouteState extends State<ConverterRoute> {
           ),
         ),
       ));
-    });
+    }
     setState(() {
-      _unitMenuItems = dropdownItem;
+      _unitMenuItems = newItems;
     });
   }
 
-  /// Sets the default values for the 'from' and 'to' [Dropdown]s.
+  /// Sets the default values for the 'from' and 'to' [Dropdown]s, and the
+  /// updated output value if a user had previously entered an input.
   void _setDefaults() {
     setState(() {
-      _fromValue = widget.units[0];
-      _toValue = widget.units[1];
+      _fromValue = widget.category.units[0];
+      _toValue = widget.category.units[1];
     });
   }
 
@@ -104,7 +97,7 @@ class _ConverterRouteState extends State<ConverterRoute> {
   void _updateConversion() {
     setState(() {
       _convertedValue =
-          _format(_inputValue * (_toValue.conversion / _fromValue.conversion));
+        _format(_inputValue * (_toValue.conversion / _fromValue.conversion));
     });
   }
 
@@ -129,8 +122,8 @@ class _ConverterRouteState extends State<ConverterRoute> {
   }
 
   Unit _getUnit(String unitName) {
-    return widget.units.firstWhere(
-      (Unit unit) {
+    return widget.category.units.firstWhere(
+        (Unit unit) {
         return unit.name == unitName;
       },
       orElse: null,
@@ -155,7 +148,7 @@ class _ConverterRouteState extends State<ConverterRoute> {
     }
   }
 
-  Widget _createDropdown(String currentValue, ValueChanged<dynamic> onChange) {
+  Widget _createDropdown(String currentValue, ValueChanged<dynamic> onChanged) {
     return Container(
       margin: EdgeInsets.only(top: 16.0),
       decoration: BoxDecoration(
@@ -168,16 +161,17 @@ class _ConverterRouteState extends State<ConverterRoute> {
       ),
       padding: EdgeInsets.symmetric(vertical: 8.0),
       child: Theme(
+        // This sets the color of the [DropdownMenuItem]
         data: Theme.of(context).copyWith(
-              canvasColor: Colors.grey[50],
-            ),
+          canvasColor: Colors.grey[50],
+        ),
         child: DropdownButtonHideUnderline(
           child: ButtonTheme(
             alignedDropdown: true,
             child: DropdownButton(
               value: currentValue,
               items: _unitMenuItems,
-              onChanged: onChange,
+              onChanged: onChanged,
               style: Theme.of(context).textTheme.title,
             ),
           ),
@@ -188,11 +182,14 @@ class _ConverterRouteState extends State<ConverterRoute> {
 
   @override
   Widget build(BuildContext context) {
-    final inputWidget = Padding(
+    final input = Padding(
       padding: _padding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // This is the widget that accepts text input. In this case, it
+          // accepts numbers and calls the onChanged property on update.
+          // You can read more about it here: https://flutter.io/text-input
           TextField(
             style: Theme.of(context).textTheme.display1,
             decoration: InputDecoration(
@@ -203,15 +200,17 @@ class _ConverterRouteState extends State<ConverterRoute> {
                 borderRadius: BorderRadius.circular(0.0),
               ),
             ),
+            // Since we only want numerical input, we use a number keyboard. There
+            // are also other keyboards for dates, emails, phone numbers, etc.
             keyboardType: TextInputType.number,
             onChanged: _updateInputValue,
           ),
-          _createDropdown(_fromValue.name, _updateFromConversion)
+          _createDropdown(_fromValue.name, _updateFromConversion),
         ],
       ),
     );
 
-    final compareIcon = RotatedBox(
+    final arrows = RotatedBox(
       quarterTurns: 1,
       child: Icon(
         Icons.compare_arrows,
@@ -219,7 +218,7 @@ class _ConverterRouteState extends State<ConverterRoute> {
       ),
     );
 
-    final outputWidget = Padding(
+    final output = Padding(
       padding: _padding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -242,10 +241,13 @@ class _ConverterRouteState extends State<ConverterRoute> {
       ),
     );
 
-    // TODO: Return the input, arrows, and output widgets, wrapped in
     final converter = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [inputWidget, compareIcon, outputWidget],
+      children: [
+        input,
+        arrows,
+        output,
+      ],
     );
 
     return Padding(
