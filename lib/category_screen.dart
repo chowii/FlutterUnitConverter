@@ -77,7 +77,6 @@ class _CategoryScreenState extends State<CategoryScreen> {
   @override
   void initState() {
     super.initState();
-    // TODO: Set the default [Category] for the unit converter that opens
     for (var i = 0; i < _categoryNames.length; i++) {
       _categories.add(Category(
         name: _categoryNames[i],
@@ -89,7 +88,6 @@ class _CategoryScreenState extends State<CategoryScreen> {
     _defaultCategory = _categories.first;
   }
 
-  // TODO: Fill out this function
   /// Function to call when a [Category] is tapped.
   void _onCategoryTap(Category category) {
     setState(() {
@@ -97,19 +95,34 @@ class _CategoryScreenState extends State<CategoryScreen> {
     });
   }
 
-  /// Makes the correct number of rows for the list view.
+  // TODO: Use a GridView for landscape mode, passing in the device orientation
+  /// Makes the correct number of rows for the list view, based on whether the
+  /// device is portrait or landscape.
   ///
-  /// For portrait, we use a [ListView].
-  Widget _buildCategoryWidgets() {
-    return ListView.builder(
-      itemBuilder: (BuildContext context, int index) {
-        return CategoryTile(
-          category: _categories[index],
-          onTap: _onCategoryTap,
-        );
-      },
-      itemCount: _categories.length,
-    );
+  /// For portrait, we use a [ListView]. For landscape, we use a [GridView].
+  Widget _buildCategoryWidgets(Orientation orientation) {
+    if (orientation == Orientation.portrait) {
+      return ListView.builder(
+        itemBuilder: (BuildContext context, int index) {
+          return CategoryTile(
+            category: _categories[index],
+            onTap: _onCategoryTap,
+          );
+        },
+        itemCount: _categories.length,
+      );
+    } else {
+      return GridView.count(
+        crossAxisCount: 2,
+        childAspectRatio: 4.0,
+        children: _categories.map((Category c) {
+          return CategoryTile(
+            category: c,
+            onTap: _onCategoryTap,
+          );
+        }).toList(),
+      );
+    }
   }
 
   /// Returns a list of mock [Unit]s.
@@ -131,14 +144,18 @@ class _CategoryScreenState extends State<CategoryScreen> {
         right: 8.0,
         bottom: 48.0,
       ),
-      child: _buildCategoryWidgets(),
+      child: _buildCategoryWidgets(MediaQuery
+        .of(context)
+        .orientation),
     );
 
     return Backdrop(
-      currentCategory: _selectedCategory == null ? _defaultCategory : _selectedCategory,
+      currentCategory: _selectedCategory == null
+        ? _defaultCategory
+        : _selectedCategory,
       frontPanel: _selectedCategory == null
-          ? UnitConverter(category: _defaultCategory)
-          : UnitConverter(category: _selectedCategory),
+        ? UnitConverter(category: _defaultCategory)
+        : UnitConverter(category: _selectedCategory),
       backPanel: listView,
       frontTitle: Text('Unit Converter'),
       backTitle: Text('Select a Category'),
