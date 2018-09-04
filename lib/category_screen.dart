@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import 'backdrop.dart';
@@ -11,9 +14,11 @@ import 'unit.dart';
 import 'unit_converter.dart';
 
 /// Category Route (screen).
+/// Loads in unit conversion data, and displays the data.
 ///
-/// This is the 'home' screen of the Unit Converter. It shows a header and
-/// a list of [Categories].
+/// This is the main screen to our app. It retrieves conversion data from a
+/// JSON asset and from an API. It displays the [Categories] in the back panel
+/// of a [Backdrop] widget and shows the [UnitConverter] in the front panel.
 ///
 /// While it is named CategoryRoute, a more apt name would be CategoryScreen,
 /// because it is responsible for the UI at the route's destination.
@@ -27,17 +32,12 @@ class CategoryScreen extends StatefulWidget {
 class _CategoryScreenState extends State<CategoryScreen> {
   Category _defaultCategory;
   Category _selectedCategory;
+
+  // Widgets are supposed to be deeply immutable objects. We can update and edit
+  // _categories as we build our app, and when we pass it into a widget's
+  // `children` property, we call .toList() on it.
+  // For more details, see https://github.com/dart-lang/sdk/issues/27755
   final _categories = <Category>[];
-  static const _categoryNames = <String>[
-    'Length',
-    'Area',
-    'Volume',
-    'Mass',
-    'Time',
-    'Digital Storage',
-    'Energy',
-    'Currency',
-  ];
   static const _baseColors = <ColorSwatch>[
     ColorSwatch(0xFF6AB7A8, {
       'highlight': Color(0xFF6AB7A8),
@@ -75,17 +75,45 @@ class _CategoryScreenState extends State<CategoryScreen> {
   ];
 
   @override
-  void initState() {
-    super.initState();
-    for (var i = 0; i < _categoryNames.length; i++) {
-      _categories.add(Category(
-        name: _categoryNames[i],
-        color: _baseColors[i],
-        iconLocation: Icons.cake,
-        units: _retrieveUnitList(_categoryNames[i]),
-      ));
+  Future<void> didChangeDependencies() async {
+    super.didChangeDependencies();
+    // We have static unit conversions located in our
+    // assets/data/regular_units.json
+    if (_categories.isEmpty) {
+      await _retrieveLocalCategories();
     }
-    _defaultCategory = _categories.first;
+  }
+
+  /// Retrieves a list of [Categories] and their [Unit]s
+  Future<void> _retrieveLocalCategories() async {
+    // Consider omitting the types for local variables. For more details on Effective
+    // Dart Usage, see https://www.dartlang.org/guides/language/effective-dart/usage
+    final json = DefaultAssetBundle
+        .of(context)
+        .loadString('assets/data/regular_units.json');
+    final data = JsonDecoder().convert(await json);
+    if (data is! Map) {
+      throw ('Data retrieved from API is not a Map');
+    }
+    var categoryIndex = 0;
+    data.keys.forEach((key) {
+      final List<Unit> units =
+          data[key].map<Unit>((dynamic data) => Unit.fromJson(data)).toList();
+
+      var category = Category(
+        name: key,
+        units: units,
+        color: _baseColors[categoryIndex],
+        iconLocation: Icons.cake,
+      );
+      setState(() {
+        if (categoryIndex == 0) {
+          _defaultCategory = category;
+        }
+        _categories.add(category);
+      });
+      categoryIndex++;
+    });
   }
 
   /// Function to call when a [Category] is tapped.
@@ -95,7 +123,6 @@ class _CategoryScreenState extends State<CategoryScreen> {
     });
   }
 
-  // TODO: Use a GridView for landscape mode, passing in the device orientation
   /// Makes the correct number of rows for the list view, based on whether the
   /// device is portrait or landscape.
   ///
@@ -125,37 +152,35 @@ class _CategoryScreenState extends State<CategoryScreen> {
     }
   }
 
-  /// Returns a list of mock [Unit]s.
-  List<Unit> _retrieveUnitList(String categoryName) {
-    return List.generate(10, (int i) {
-      i += 1;
-      return Unit(
-        name: '$categoryName Unit $i',
-        conversion: i.toDouble(),
-      );
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
+    if (_categories.isEmpty) {
+      return Center(
+        child: Container(
+          height: 180.0,
+          width: 180.0,
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    // Based on the device size, figure out how to best lay out the list
+    // You can also use MediaQuery.of(context).size to calculate the orientation
+    assert(debugCheckHasMediaQuery(context));
     final listView = Padding(
       padding: EdgeInsets.only(
         left: 8.0,
         right: 8.0,
         bottom: 48.0,
       ),
-      child: _buildCategoryWidgets(MediaQuery
-        .of(context)
-        .orientation),
+      child: _buildCategoryWidgets(MediaQuery.of(context).orientation),
     );
-
     return Backdrop(
-      currentCategory: _selectedCategory == null
-        ? _defaultCategory
-        : _selectedCategory,
+      currentCategory:
+          _selectedCategory == null ? _defaultCategory : _selectedCategory,
       frontPanel: _selectedCategory == null
-        ? UnitConverter(category: _defaultCategory)
-        : UnitConverter(category: _selectedCategory),
+          ? UnitConverter(category: _defaultCategory)
+          : UnitConverter(category: _selectedCategory),
       backPanel: listView,
       frontTitle: Text('Unit Converter'),
       backTitle: Text('Select a Category'),
