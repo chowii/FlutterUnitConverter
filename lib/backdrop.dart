@@ -30,7 +30,7 @@ class _BackdropPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      elevation: 2.0,
+      elevation: 20.0,
       borderRadius: BorderRadius.only(
         topLeft: Radius.circular(16.0),
         topRight: Radius.circular(16.0),
@@ -149,7 +149,7 @@ class _BackdropState extends State<Backdrop>
     // mode, while 1.0 means that the front panel is open.
     _controller = AnimationController(
       duration: Duration(milliseconds: 300),
-      value: 1.0,
+      value: 0.0,
       vsync: this,
     );
   }

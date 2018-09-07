@@ -73,6 +73,16 @@ class _CategoryScreenState extends State<CategoryScreen> {
       'error': Color(0xFF912D2D),
     }),
   ];
+  static const _imageAssets = <String>[
+    'assets/icons/length.png',
+    'assets/icons/area.png',
+    'assets/icons/volume.png',
+    'assets/icons/mass.png',
+    'assets/icons/time.png',
+    'assets/icons/digital_storage.png',
+    'assets/icons/power.png',
+    'assets/icons/currency.png',
+  ];
 
   @override
   Future<void> didChangeDependencies() async {
@@ -104,7 +114,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
         name: key,
         units: units,
         color: _baseColors[categoryIndex],
-        iconLocation: Icons.cake,
+        // TODO: Replace the placeholder icon with an icon image path
+        iconLocation: _imageAssets[categoryIndex],
       );
       setState(() {
         if (categoryIndex == 0) {
